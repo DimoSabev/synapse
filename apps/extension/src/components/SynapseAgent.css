@@ -266,3 +266,192 @@
     animation: none;
   }
 }
+
+
+/* SYNAPSE PROJECT ROOMS */
+
+.synapse-panel {
+  max-height: min(720px, calc(100vh - 175px));
+  display: flex;
+  flex-direction: column;
+}
+
+.synapse-panel-body {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.synapse-room {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.synapse-room-heading h3 {
+  margin: 0 0 7px;
+  color: #f0f5ff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.synapse-room-heading p {
+  margin: 0;
+  color: #a6bad7;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.synapse-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #c5d7f1;
+  font-size: 12px;
+}
+
+.synapse-input {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #385376;
+  border-radius: 10px;
+  background: #192d49;
+  color: #f1f6ff;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.synapse-input:focus {
+  border-color: #79adff;
+  box-shadow: 0 0 0 2px rgba(121, 173, 255, 0.15);
+}
+
+.synapse-input::placeholder {
+  color: #829bbd;
+}
+
+.synapse-textarea {
+  min-height: 85px;
+  resize: vertical;
+}
+
+.synapse-room-divider {
+  margin: 8px 0 2px;
+  color: #819cc1;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+.synapse-secondary-button {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #49678f;
+  border-radius: 10px;
+  background: #203a5c;
+  color: #dceaff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.synapse-secondary-button:hover {
+  background: #2b4c75;
+}
+
+.synapse-primary-button:disabled,
+.synapse-secondary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.synapse-connected {
+  display: inline-block;
+  margin-bottom: 9px;
+  color: #66dca8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.synapse-code-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid #355780;
+  border-radius: 12px;
+  background: #1b3353;
+}
+
+.synapse-code-card > span {
+  color: #96b1d5;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.synapse-code-card > strong {
+  overflow-wrap: anywhere;
+  color: #e6f1ff;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.synapse-events {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  max-height: 230px;
+  overflow-y: auto;
+}
+
+.synapse-events > p {
+  color: #9eb5d3;
+  font-size: 12px;
+}
+
+.synapse-event {
+  padding: 12px;
+  border: 1px solid #344e70;
+  border-radius: 10px;
+  background: #1b304e;
+}
+
+.synapse-event strong {
+  color: #9fc6ff;
+  font-size: 11px;
+}
+
+.synapse-event p {
+  margin: 6px 0;
+  color: #e0ebfc;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.synapse-event small {
+  color: #819cbd;
+  font-size: 10px;
+}
+
+.synapse-link-button {
+  border: 0;
+  background: transparent;
+  color: #91baff;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 7px;
+}
+
+.synapse-error {
+  padding: 10px;
+  border: 1px solid #a95463;
+  border-radius: 9px;
+  background: #45232d;
+  color: #ffd1d9;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

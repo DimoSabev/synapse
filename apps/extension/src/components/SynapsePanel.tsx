@@ -1,4 +1,6 @@
 
+import ProjectRoom from './ProjectRoom'
+
 type SynapsePanelProps = {
   onClose: () => void
 }
@@ -31,39 +33,7 @@ export default function SynapsePanel({
       </header>
 
       <main className="synapse-panel-body">
-        <div className="synapse-welcome">
-          <span className="synapse-welcome-symbol">✧</span>
-          <h2>Better together.</h2>
-          <p>
-            Your team's intelligence,
-            always within reach.
-          </p>
-        </div>
-
-        <div className="synapse-info-card">
-          <div className="synapse-info-heading">
-            <span>✦</span>
-            <strong>Welcome to Synapse</strong>
-          </div>
-
-          <p>
-            Connect your project to start
-            collaborating with your team.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="synapse-primary-button"
-          onClick={() => {
-            window.alert(
-              'Project Rooms will be available in Phase 2.2.'
-            )
-          }}
-        >
-          Connect to a project
-          <span>→</span>
-        </button>
+        <ProjectRoom />
       </main>
 
       <footer className="synapse-footer">
