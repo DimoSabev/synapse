@@ -16,18 +16,31 @@ type ProjectEvent = {
   created_at: string
 }
 
+type ProjectMember = {
+  user_id: string
+  display_name: string
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 export default function ProjectRoom() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+
   const [displayName, setDisplayName] = useState('')
   const [projectName, setProjectName] = useState('')
   const [joinCode, setJoinCode] = useState('')
+
   const [project, setProject] = useState<Project | null>(null)
   const [events, setEvents] = useState<ProjectEvent[]>([])
+  const [members, setMembers] = useState<ProjectMember[]>([])
   const [message, setMessage] = useState('')
 
+  // Authentication
   useEffect(() => {
     let active = true
 
@@ -48,23 +61,32 @@ export default function ProjectRoom() {
           if (active) setUser(data.user)
         }
       } catch (err) {
-        if (active) {
-          setError(
-            err instanceof Error ? err.message : 'Authentication failed'
-          )
-        }
+        if (active) setError(errorMessage(err))
       } finally {
         if (active) setLoading(false)
       }
     }
 
-    initialize()
+    void initialize()
 
     return () => {
       active = false
     }
   }, [])
 
+  // Load project members
+  async function loadMembers(projectId: string) {
+    const { data, error } = await supabase
+      .from('project_members')
+      .select('user_id, display_name')
+      .eq('project_id', projectId)
+
+    if (error) throw error
+
+    setMembers(data ?? [])
+  }
+
+  // Load a project
   async function loadProject(id: string) {
     const { data, error } = await supabase
       .from('projects')
@@ -74,10 +96,14 @@ export default function ProjectRoom() {
 
     if (error) throw error
 
-    setProject(data)
+    // Ensure membership data is available before opening the room.
+    await loadMembers(id)
+
     setEvents([])
+    setProject(data)
   }
 
+  // Load activity
   async function loadEvents(id: string) {
     const { data, error } = await supabase
       .from('project_events')
@@ -87,23 +113,26 @@ export default function ProjectRoom() {
       .limit(50)
 
     if (error) throw error
+
     setEvents(data ?? [])
   }
 
+  // Realtime collaboration
   useEffect(() => {
     if (!project) return
 
     let active = true
+    const projectId = project.id
 
     const channel = supabase
-      .channel(`synapse-events-${project.id}`)
+      .channel(`synapse-events-${projectId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'project_events',
-          filter: `project_id=eq.${project.id}`,
+          filter: `project_id=eq.${projectId}`,
         },
         (payload) => {
           if (!active) return
@@ -114,14 +143,26 @@ export default function ProjectRoom() {
             if (previous.some((item) => item.id === event.id)) {
               return previous
             }
+
             return [event, ...previous].slice(0, 50)
+          })
+
+          // Refresh names when a new event arrives.
+          void loadMembers(projectId).catch((err) => {
+            console.error(
+              '[Synapse] Member refresh failed:',
+              err
+            )
           })
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED' && active) {
-          loadEvents(project.id).catch((err) => {
-            if (active) setError(String(err))
+          void Promise.all([
+            loadEvents(projectId),
+            loadMembers(projectId),
+          ]).catch((err) => {
+            if (active) setError(errorMessage(err))
           })
         }
       })
@@ -132,8 +173,11 @@ export default function ProjectRoom() {
     }
   }, [project?.id])
 
+  // Create project
   async function createProject() {
-    if (!user || !displayName.trim() || !projectName.trim()) return
+    if (!user || !displayName.trim() || !projectName.trim()) {
+      return
+    }
 
     setBusy(true)
     setError('')
@@ -148,16 +192,20 @@ export default function ProjectRoom() {
       )
 
       if (error) throw error
+
       await loadProject(data as string)
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
   }
 
+  // Join project
   async function joinProject() {
-    if (!user || !displayName.trim() || !joinCode.trim()) return
+    if (!user || !displayName.trim() || !joinCode.trim()) {
+      return
+    }
 
     setBusy(true)
     setError('')
@@ -172,14 +220,16 @@ export default function ProjectRoom() {
       )
 
       if (error) throw error
+
       await loadProject(data as string)
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
   }
 
+  // Publish activity
   async function publishUpdate() {
     if (!user || !project || !message.trim()) return
 
@@ -196,17 +246,44 @@ export default function ProjectRoom() {
         })
 
       if (error) throw error
+
       setMessage('')
       await loadEvents(project.id)
+      await loadMembers(project.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
   }
 
+  // Resolve event author
+  function getAuthorName(userId: string): string {
+    if (userId === user?.id) {
+      return 'You'
+    }
+
+    const member = members.find(
+      (item) => item.user_id === userId
+    )
+
+    return member?.display_name?.trim() || 'Teammate'
+  }
+
+  function switchProject() {
+    setProject(null)
+    setEvents([])
+    setMembers([])
+    setMessage('')
+    setError('')
+  }
+
   if (loading) {
-    return <div className="synapse-room">Connecting to Synapse...</div>
+    return (
+      <div className="synapse-room">
+        Connecting to Synapse...
+      </div>
+    )
   }
 
   return (
@@ -223,7 +300,9 @@ export default function ProjectRoom() {
         <>
           <div className="synapse-room-heading">
             <h3>Connect your team</h3>
-            <p>Create a shared workspace or join an existing one.</p>
+            <p>
+              Create a shared workspace or join an existing one.
+            </p>
           </div>
 
           <label className="synapse-field-label">
@@ -237,7 +316,9 @@ export default function ProjectRoom() {
             />
           </label>
 
-          <div className="synapse-room-divider">CREATE PROJECT</div>
+          <div className="synapse-room-divider">
+            CREATE PROJECT
+          </div>
 
           <input
             className="synapse-input"
@@ -249,13 +330,19 @@ export default function ProjectRoom() {
 
           <button
             className="synapse-primary-button"
-            disabled={busy || !displayName.trim() || !projectName.trim()}
+            disabled={
+              busy ||
+              !displayName.trim() ||
+              !projectName.trim()
+            }
             onClick={createProject}
           >
             Create project →
           </button>
 
-          <div className="synapse-room-divider">OR JOIN A TEAM</div>
+          <div className="synapse-room-divider">
+            OR JOIN A TEAM
+          </div>
 
           <input
             className="synapse-input"
@@ -266,7 +353,11 @@ export default function ProjectRoom() {
 
           <button
             className="synapse-secondary-button"
-            disabled={busy || !displayName.trim() || !joinCode.trim()}
+            disabled={
+              busy ||
+              !displayName.trim() ||
+              !joinCode.trim()
+            }
             onClick={joinProject}
           >
             Join project
@@ -275,7 +366,9 @@ export default function ProjectRoom() {
       ) : (
         <>
           <div className="synapse-room-heading">
-            <span className="synapse-connected">● CONNECTED</span>
+            <span className="synapse-connected">
+              ● CONNECTED
+            </span>
             <h3>{project.name}</h3>
             <p>Shared project workspace</p>
           </div>
@@ -283,6 +376,7 @@ export default function ProjectRoom() {
           <div className="synapse-code-card">
             <span>TEAM INVITATION CODE</span>
             <strong>{project.join_code}</strong>
+
             <button
               className="synapse-secondary-button"
               onClick={() =>
@@ -295,20 +389,29 @@ export default function ProjectRoom() {
             </button>
           </div>
 
-          <div className="synapse-room-divider">TEAM ACTIVITY</div>
+          <div className="synapse-room-divider">
+            TEAM ACTIVITY
+          </div>
 
           <div className="synapse-events" aria-live="polite">
             {events.length === 0 ? (
               <p>No updates yet. Start the conversation.</p>
             ) : (
               events.map((event) => (
-                <div className="synapse-event" key={event.id}>
+                <div
+                  className="synapse-event"
+                  key={event.id}
+                >
                   <strong>
-                    {event.user_id === user.id ? 'You' : 'Teammate'}
+                    {getAuthorName(event.user_id)}
                   </strong>
+
                   <p>{event.content}</p>
+
                   <small>
-                    {new Date(event.created_at).toLocaleTimeString()}
+                    {new Date(
+                      event.created_at
+                    ).toLocaleTimeString()}
                   </small>
                 </div>
               ))
@@ -333,11 +436,7 @@ export default function ProjectRoom() {
 
           <button
             className="synapse-link-button"
-            onClick={() => {
-              setProject(null)
-              setEvents([])
-              setError('')
-            }}
+            onClick={switchProject}
           >
             Switch project
           </button>
@@ -346,3 +445,4 @@ export default function ProjectRoom() {
     </div>
   )
 }
+
