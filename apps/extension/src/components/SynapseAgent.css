@@ -455,3 +455,233 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+
+
+
+/* SYNAPSE PERSONALIZED INTELLIGENCE */
+
+.synapse-intelligence-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.synapse-intelligence-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.synapse-intelligence-heading strong {
+  color: #edf4ff;
+  font-size: 13px;
+}
+
+.synapse-intelligence-heading span {
+  color: #91a9ca;
+  font-size: 10px;
+}
+
+.synapse-insights-empty {
+  padding: 15px;
+  border: 1px solid #344e70;
+  border-radius: 12px;
+  background: #192d49;
+  color: #a6bad7;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.synapse-insight-card {
+  padding: 15px;
+  border: 1px solid #38577c;
+  border-radius: 13px;
+  background: #1b304e;
+}
+
+.synapse-insight-card.severity-high {
+  border-left: 3px solid #ff7185;
+}
+
+.synapse-insight-card.severity-medium {
+  border-left: 3px solid #f3b75e;
+}
+
+.synapse-insight-card.severity-low {
+  border-left: 3px solid #69b6ff;
+}
+
+.synapse-insight-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.synapse-insight-type {
+  color: #a8caff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.synapse-severity {
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.synapse-severity.severity-high {
+  background: rgba(255, 113, 133, 0.15);
+  color: #ff91a0;
+}
+
+.synapse-severity.severity-medium {
+  background: rgba(243, 183, 94, 0.15);
+  color: #f3c47c;
+}
+
+.synapse-severity.severity-low {
+  background: rgba(105, 182, 255, 0.15);
+  color: #9bcaff;
+}
+
+.synapse-insight-card h4 {
+  margin: 12px 0 8px;
+  color: #f0f5ff;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.synapse-insight-card > p {
+  margin: 0 0 12px;
+  color: #c3d5ed;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.synapse-suggested-action {
+  padding: 11px;
+  border-radius: 9px;
+  background: #253f61;
+}
+
+.synapse-suggested-action strong {
+  color: #a9ceff;
+  font-size: 11px;
+}
+
+.synapse-suggested-action p {
+  margin: 6px 0 0;
+  color: #e0ebfc;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.synapse-insight-card > small {
+  display: block;
+  margin-top: 12px;
+  color: #819cbd;
+  font-size: 10px;
+}
+
+
+
+/* PHASE 3.4.3 - AVATAR NOTIFICATIONS */
+
+.synapse-avatar-button.has-insights {
+  border-color: rgba(255, 113, 133, 0.8);
+  box-shadow:
+    0 10px 30px rgba(18, 58, 132, 0.3),
+    0 0 24px rgba(255, 113, 133, 0.3);
+}
+
+.synapse-notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -7px;
+  min-width: 23px;
+  height: 23px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 2px solid #152b50;
+  background: #f05270;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  font-family: inherit;
+  pointer-events: none;
+  animation: synapse-notification-appear 0.25s ease-out;
+}
+
+@keyframes synapse-notification-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synapse-notification-badge {
+    animation: none;
+  }
+}
+
+
+/* PHASE 3.4.3 - INSIGHT READ STATUS */
+
+.synapse-insight-new {
+  display: inline-block;
+  margin-top: 10px;
+  color: #ff91a0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+}
+
+.synapse-mark-read-button {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #5278a7;
+  border-radius: 9px;
+  background: #28486d;
+  color: #dceaff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.synapse-mark-read-button:hover {
+  background: #365d8c;
+}
+
+.synapse-mark-read-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.synapse-insight-read {
+  margin-top: 12px;
+  color: #66dca8;
+  font-size: 11px;
+  font-weight: 600;
+}

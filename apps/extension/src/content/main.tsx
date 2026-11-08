@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 
 import App from './views/App'
 import synapseStyles from '@/components/SynapseAgent.css?inline'
+import { initializeContextAutoSync } from '@/context/contextAutoSync'
 
 const ROOT_ID = 'synapse-extension-root'
 
@@ -14,6 +15,7 @@ function initializeSynapse() {
 
   const host = document.createElement('div')
   host.id = ROOT_ID
+  host.dataset.synapseAgent = 'true'
 
   host.style.position = 'fixed'
   host.style.top = '0'
@@ -38,6 +40,10 @@ function initializeSynapse() {
       <App />
     </StrictMode>
   )
+
+  // Phase 3.6: independently observe authorized
+  // page editors. This does not alter Synapse Core.
+  initializeContextAutoSync()
 }
 
 if (document.readyState === 'loading') {

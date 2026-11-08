@@ -1,25 +1,292 @@
 
-import { useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 
 import SynapseAvatar from '@/components/SynapseAvatar'
 import SynapsePanel from '@/components/SynapsePanel'
+import { useSynapseInsights } from '@/hooks/useSynapseInsights'
+import { supabase } from '@/lib/supabase'
+
+import {
+  normalizeOrigin,
+  type ContextBinding,
+} from '@/context/contextBinding'
+
+import {
+  DOCUMENT_BINDING_KEY,
+  readDocumentBinding,
+  writeDocumentBinding,
+  disableDocumentBinding,
+  clearDocumentBinding,
+} from '@/context/tabContextBinding'
 
 export default function App() {
   const [isOpen, setIsOpen] = useState(false)
+
+  const [activeProjectId, setActiveProjectId] =
+    useState<string | null>(null)
+
+  const [activeUserId, setActiveUserId] =
+    useState<string | null>(null)
+
+  const previousContext = useRef<{
+    projectId: string | null
+    userId: string | null
+  }>({
+    projectId: null,
+    userId: null,
+  })
+
+  const [binding, setBinding] =
+    useState<ContextBinding | null>(null)
+
+  const [syncError, setSyncError] = useState('')
+  const [syncBusy, setSyncBusy] = useState(false)
+
+  const handleContextChange = useCallback(
+    (projectId: string | null, userId: string | null) => {
+      const previous = previousContext.current
+
+      previousContext.current = {
+        projectId,
+        userId,
+      }
+
+      setActiveProjectId(projectId)
+      setActiveUserId(userId)
+
+      if (
+        previous.projectId &&
+        previous.userId &&
+        (
+          previous.projectId !== projectId ||
+          previous.userId !== userId
+        )
+      ) {
+        // Only disable this document's binding.
+        void (async () => {
+          try {
+            const stored = await readDocumentBinding()
+
+            if (
+              stored?.enabled &&
+              stored.projectId === previous.projectId &&
+              stored.userId === previous.userId
+            ) {
+              const latest = previousContext.current
+
+if (
+  latest.projectId === previous.projectId &&
+  latest.userId === previous.userId
+) {
+  await disableDocumentBinding()
+}
+            }
+          } catch (error) {
+            console.error(
+              '[Synapse] Context cleanup failed:',
+              error
+            )
+          }
+        })()
+      }
+    },
+    []
+  )
+
+  const intelligence = useSynapseInsights(
+    activeProjectId,
+    activeUserId
+  )
+
+  useEffect(() => {
+    let active = true
+
+    async function refresh() {
+      const stored = await readDocumentBinding()
+
+      if (active) {
+        setBinding(stored)
+      }
+    }
+
+    void refresh().catch(console.error)
+
+    const listener = (
+      changes: Record<
+        string,
+        chrome.storage.StorageChange
+      >,
+      area: string
+    ) => {
+      if (
+        area === 'local' &&
+        DOCUMENT_BINDING_KEY in changes
+      ) {
+        void refresh().catch(console.error)
+      }
+    }
+
+    chrome.storage.onChanged.addListener(listener)
+
+    return () => {
+      active = false
+      chrome.storage.onChanged.removeListener(listener)
+    }
+  }, [])
+
+  const syncEnabled =
+    binding?.enabled === true &&
+    binding.projectId === activeProjectId &&
+    binding.userId === activeUserId
+
+  const allowedOrigins = syncEnabled
+    ? binding!.allowedOrigins
+    : []
+
+  const enableAutoSync = useCallback(
+    async (sourceUrl: string) => {
+      if (!activeProjectId || !activeUserId) {
+        setSyncError('Select a project first.')
+        return
+      }
+
+      const origin = normalizeOrigin(sourceUrl)
+
+      if (!origin) {
+        setSyncError('Enter a valid HTTPS URL.')
+        return
+      }
+
+      // Restrict capture to the current page's origin.
+      if (origin !== window.location.origin) {
+        setSyncError(
+          'Open the website you want to monitor, ' +
+          'then enable Auto-Sync on that website.'
+        )
+        return
+      }
+
+      setSyncBusy(true)
+      setSyncError('')
+
+      try {
+        const { data, error } =
+          await supabase.auth.getUser()
+
+        if (
+          error ||
+          !data.user ||
+          data.user.id !== activeUserId
+        ) {
+          throw new Error(
+            'Authenticated user mismatch.'
+          )
+        }
+
+        const { data: membership, error: memberError } =
+          await supabase
+            .from('project_members')
+            .select('user_id')
+            .eq('project_id', activeProjectId)
+            .eq('user_id', activeUserId)
+            .maybeSingle()
+
+        if (memberError || !membership) {
+          throw new Error(
+            'Project membership not verified.'
+          )
+        }
+
+        const captureContent = window.confirm(
+          'Synapse can read actual text changes in standard editors on this website and save them privately to your project. Do not enable on sites containing passwords, private messages, payment or sensitive information. Continue with CONTENT capture? Cancel enables metadata-only Auto-Sync.'
+        )
+
+        const next: ContextBinding = {
+          projectId: activeProjectId,
+          userId: activeUserId,
+          allowedOrigins: [origin],
+          enabled: true,
+          captureContent,
+        }
+
+        await writeDocumentBinding(next)
+        setBinding(next)
+      } catch (error) {
+        setSyncError(String(error))
+      } finally {
+        setSyncBusy(false)
+      }
+    },
+    [activeProjectId, activeUserId]
+  )
+
+  const disableAutoSync = useCallback(
+    async () => {
+      setSyncBusy(true)
+      setSyncError('')
+
+      try {
+        await disableDocumentBinding()
+
+        const next = await readDocumentBinding()
+        setBinding(next)
+      } catch (error) {
+        setSyncError(String(error))
+      } finally {
+        setSyncBusy(false)
+      }
+    },
+    []
+  )
+
+  // Remove the current document's permission when
+  // navigating away. Never touch other documents.
+  useEffect(() => {
+    const cleanup = () => {
+      void clearDocumentBinding()
+    }
+
+    window.addEventListener('pagehide', cleanup)
+
+    return () => {
+      window.removeEventListener('pagehide', cleanup)
+    }
+  }, [])
 
   return (
     <div className="synapse-agent">
       <SynapseAvatar
         isOpen={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
+        unreadCount={intelligence.unreadCount}
+        onClick={() =>
+          setIsOpen(current => !current)
+        }
       />
 
-      {isOpen && (
+      <div
+        hidden={!isOpen}
+        style={{
+          display: isOpen ? 'block' : 'none',
+        }}
+      >
         <SynapsePanel
           onClose={() => setIsOpen(false)}
+          onContextChange={handleContextChange}
+          intelligence={intelligence}
+          activeProjectId={activeProjectId}
+          syncEnabled={syncEnabled}
+          syncBusy={syncBusy}
+          syncError={syncError}
+          allowedOrigins={allowedOrigins}
+          onEnableAutoSync={enableAutoSync}
+          onDisableAutoSync={disableAutoSync}
         />
-      )}
+      </div>
     </div>
   )
 }
-
